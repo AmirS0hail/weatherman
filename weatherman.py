@@ -7,6 +7,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Weather Man")
     parser.add_argument("-e", "--year", help="Year for the report")
     parser.add_argument("-a", "--month", help="Month for the report in YYYY/MM format")
+    parser.add_argument("-c", "--chart", help="Draw horizontal bar charts for highest and lowest temperature", metavar="MONTH")
     parser.add_argument("folder", help="Path to the folder containing weather data files")
     return parser.parse_args()
 
@@ -84,6 +85,32 @@ def month_report(month, folder):
     print(f"Lowest Average: {average_temp:.1f}C")
     print(f"Average Humidity: {average_humidity:.1f}%")
 
+# Function to draw horizontal bar chart for temperature
+def draw_temp_chart(data, chart_title):
+    print(chart_title)
+    for day, temp_data in data.items():
+        highest_temp = temp_data["highest_temp"]
+        lowest_temp = temp_data["lowest_temp"]
+        print(f"{day} {'+' * int(highest_temp)} {highest_temp:.0f}C")
+        print(f"   {'+' * int(lowest_temp)} {lowest_temp:.0f}C")
+
+# Function to generate temperature data for each day in a month
+def generate_temp_data(weather_data):
+    temp_data = {}
+    for date, data in weather_data.items():
+        if not isinstance(date, datetime):
+            # Assume date is in string format "%Y-%m-%d"
+            date = datetime.strptime(date, "%Y-%m-%d")
+        day = date.day
+        if day not in temp_data:
+            temp_data[day] = {"highest_temp": data["temperature"], "lowest_temp": data["temperature"]}
+        else:
+            if data["temperature"] > temp_data[day]["highest_temp"]:
+                temp_data[day]["highest_temp"] = data["temperature"]
+            if data["temperature"] < temp_data[day]["lowest_temp"]:
+                temp_data[day]["lowest_temp"] = data["temperature"]
+    return temp_data
+
 # Main function
 def main():
     args = parse_arguments()
@@ -91,8 +118,15 @@ def main():
         year_report(args.year, args.folder)
     elif args.month:
         month_report(args.month, args.folder)
+    elif args.chart:
+        month_weather_data = read_weather_data(args.folder, month=args.chart)
+        if month_weather_data:
+            temp_data = generate_temp_data(month_weather_data)
+            draw_temp_chart(temp_data, f"{args.chart} Temperature Chart")
+        else:
+            print(f"No data available for the month {args.chart}")
     else:
-        print("Please provide either a year (-e) or a month (-a) for the report.")
+        print("Please provide either a year (-e), a month (-a), or use the chart option (-c) for the report.")
 
 # Call main function
 if __name__ == "__main__":
